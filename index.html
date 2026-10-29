@@ -25,28 +25,16 @@
       </div>
       <form id="search-form" class="search-form"><label class="sr-only" for="menu-search">메뉴 또는 식당 검색</label><input id="menu-search" type="search" placeholder="예: 흑돼지, 고기국수, 식당 이름" autocomplete="off"><button type="submit">검색</button></form>
     </section>
-    <section class="recommendations" aria-labelledby="recommendations-title">
-      <div class="section-heading"><div><p class="eyebrow">CURATED FOR JEJU</p><h2 id="recommendations-title">오늘의 추천 식당</h2></div><p>카드를 누르면 카카오맵 실제 장소 검색 결과를 보여드려요.</p></div>
-      <div class="recommendation-list">
-        <article class="recommendation-card">
-          <img class="recommendation-image" src="recommendation-black-pork.png" alt="제주 흑돼지 구이">
-          <div class="recommendation-content"><p class="recommendation-area">애월 · 노형</p><h3>제주 흑돼지</h3><p>노릇하게 구운 제주 흑돼지를 찾아보세요.</p><button type="button" class="recommendation-button" data-recommendation="흑돼지">주변 식당 보기</button></div>
-        </article>
-        <article class="recommendation-card">
-          <img class="recommendation-image" src="recommendation-gogi-guksu.png" alt="제주 고기국수">
-          <div class="recommendation-content"><p class="recommendation-area">제주시 · 서귀포</p><h3>고기국수 한 그릇</h3><p>든든하고 따뜻한 제주식 고기국수를 만나보세요.</p><button type="button" class="recommendation-button" data-recommendation="고기국수">주변 식당 보기</button></div>
-        </article>
-        <article class="recommendation-card">
-          <img class="recommendation-image" src="recommendation-seafood.png" alt="제주 해산물 요리">
-          <div class="recommendation-content"><p class="recommendation-area">성산 · 함덕</p><h3>바다 한 상</h3><p>갈치와 전복으로 차린 제주 해산물 식당을 찾아보세요.</p><button type="button" class="recommendation-button" data-recommendation="해산물">주변 식당 보기</button></div>
-        </article>
-      </div>
-    </section>
     <section class="results-section" aria-live="polite">
       <p id="search-notice" class="search-notice">메뉴 또는 식당 키워드를 검색하면 카카오맵 장소 검색 결과를 보여드려요.</p>
-      <div class="place-search-layout">
-        <div id="results" class="restaurant-list"></div>
-      </div>
+      <section id="search-recommendations" class="search-recommendations" aria-labelledby="search-recommendations-title" hidden>
+        <div class="search-results-heading"><div><p class="eyebrow">SEARCH RECOMMENDATIONS</p><h2 id="search-recommendations-title">검색 추천 식당</h2></div><p>카카오맵 기본 정확도 순 상위 4곳</p></div>
+        <div id="featured-results" class="restaurant-list featured-results"></div>
+      </section>
+      <section id="general-results-section" class="general-results-section" aria-labelledby="general-results-title" hidden>
+        <div class="search-results-heading"><div><p class="eyebrow">MORE RESULTS</p><h2 id="general-results-title">일반 검색 결과</h2></div></div>
+        <div class="place-search-layout"><div id="results" class="restaurant-list"></div></div>
+      </section>
       <div id="load-more-area" class="load-more-area" hidden>
         <button id="load-more-button" class="load-more-button" type="button">더보기</button>
         <p id="pagination-notice" class="pagination-notice" aria-live="polite"></p>

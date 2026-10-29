@@ -36,6 +36,9 @@ function initIndex() {
   const form = document.querySelector("#search-form");
   const input = document.querySelector("#menu-search");
   const results = document.querySelector("#results");
+  const featuredResults = document.querySelector("#featured-results");
+  const featuredSection = document.querySelector("#search-recommendations");
+  const generalResultsSection = document.querySelector("#general-results-section");
   const notice = document.querySelector("#search-notice");
   const submitButton = form.querySelector("button[type='submit']");
   const loadMoreArea = document.querySelector("#load-more-area");
@@ -48,10 +51,17 @@ function initIndex() {
   let isLoading = false;
   let searchRequestId = 0;
 
-  function placeCards(places) {
+  function resetResultSections() {
+    featuredResults.innerHTML = "";
+    results.innerHTML = "";
+    featuredSection.hidden = true;
+    generalResultsSection.hidden = true;
+  }
+
+  function placeCards(places, includeSource = true) {
     return places.map((place) => `
       <article class="restaurant-card place-card">
-        <div class="card-top"><h3>${escapeHtml(place.name)}</h3><span class="place-source">카카오맵 장소 검색 결과</span></div>
+        <div class="card-top"><h3>${escapeHtml(place.name)}</h3>${includeSource ? '<span class="place-source">카카오맵 장소 검색 결과</span>' : ""}</div>
         <p class="place-category">${escapeHtml(place.category)}</p>
         <p class="address">${escapeHtml(place.address)}</p>
         <a class="place-link" href="${escapeHtml(place.kakaoUrl)}" target="_blank" rel="noopener">카카오맵 상세 보기 <span>↗</span></a>
@@ -93,12 +103,22 @@ function initIndex() {
       if (!places.length && !append) {
         notice.textContent = `‘${termAtRequest}’에 대한 카카오맵 장소 검색 결과가 없습니다.`;
         paginationNotice.textContent = "";
+        resetResultSections();
         return;
       }
-      if (append) results.insertAdjacentHTML("beforeend", placeCards(places));
-      else results.innerHTML = placeCards(places);
+      if (append) {
+        results.insertAdjacentHTML("beforeend", placeCards(places));
+        if (places.length) generalResultsSection.hidden = false;
+      } else {
+        const featuredPlaces = places.slice(0, 4);
+        const generalPlaces = places.slice(4);
+        featuredResults.innerHTML = placeCards(featuredPlaces, false);
+        results.innerHTML = placeCards(generalPlaces);
+        featuredSection.hidden = featuredPlaces.length === 0;
+        generalResultsSection.hidden = generalPlaces.length === 0;
+      }
 
-      notice.textContent = `카카오맵 장소 검색 결과 ${results.children.length}곳을 보고 있어요.`;
+      notice.textContent = `카카오맵 장소 검색 결과 ${featuredResults.children.length + results.children.length}곳을 보고 있어요.`;
       if (isEnd) paginationNotice.textContent = "모든 검색 결과를 확인했어요.";
     } catch (error) {
       if (requestId === searchRequestId) {
@@ -119,7 +139,7 @@ function initIndex() {
     if (!cleanTerm) {
       history.replaceState(null, "", "index.html");
       notice.textContent = getSearchErrorMessage("QUERY_MISSING");
-      results.innerHTML = "";
+      resetResultSections();
       activeTerm = "";
       currentPage = 0;
       isEnd = true;
@@ -133,7 +153,7 @@ function initIndex() {
     currentPage = 0;
     isEnd = false;
     isLoading = false;
-    results.innerHTML = "";
+    resetResultSections();
     paginationNotice.textContent = "";
     notice.textContent = `카카오맵에서 ‘${cleanTerm}’ 장소를 찾고 있어요.`;
     updateLoadMore();
@@ -143,7 +163,6 @@ function initIndex() {
   form.addEventListener("submit", (event) => { event.preventDefault(); submitSearch(input.value); });
   loadMoreButton.addEventListener("click", () => loadPage(currentPage + 1, true));
   document.querySelectorAll(".category-chip").forEach((chip) => chip.addEventListener("click", () => submitSearch(chip.dataset.category)));
-  document.querySelectorAll(".recommendation-button").forEach((button) => button.addEventListener("click", () => submitSearch(button.dataset.recommendation)));
   if (initialTerm) submitSearch(initialTerm);
 }
 

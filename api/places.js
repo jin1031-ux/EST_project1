@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const params = new URLSearchParams({ query, page: String(currentPage), size: "15" });
+    const params = new URLSearchParams({ query, page: String(currentPage), size: "15", sort: "accuracy" });
     const response = await fetch(`https://dapi.kakao.com/v2/local/search/keyword.json?${params}`, {
       headers: { Authorization: `KakaoAK ${restApiKey}` }
     });
