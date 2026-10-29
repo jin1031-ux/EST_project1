@@ -1,49 +1,49 @@
-// 첫 버전에서 사용하는 예시 식당 데이터입니다. 실제 매장 정보가 아닙니다.
+// 제주 지역을 기준으로 구성한 예시 식당 데이터입니다. 실제 매장 정보가 아닙니다.
 const restaurants = [
   {
-    id: "moru-table",
-    name: "모루 식탁",
-    address: "서울시 마포구 연희로 12길 8",
+    id: "hallasan-black-pork",
+    name: "한라산 흑돼지",
+    address: "제주특별자치도 제주시 관덕로 18길 12",
     menu: [
-      { name: "치킨마요 덮밥", price: 9000 },
-      { name: "연어 덮밥", price: 12000 },
-      { name: "미소국", price: 2500 }
+      { name: "흑돼지 근고기", price: 22000 },
+      { name: "흑돼지 김치찌개", price: 9000 },
+      { name: "제주 막걸리", price: 6000 }
     ],
     seatStatus: "여유",
     updatedAt: "2026-10-28T18:10:00"
   },
   {
-    id: "spring-noodle",
-    name: "봄날 국수",
-    address: "서울시 마포구 동교로 21길 14",
+    id: "seogwipo-noodle",
+    name: "서귀포 고기국수",
+    address: "제주특별자치도 서귀포시 천지로 42",
     menu: [
-      { name: "비빔국수", price: 8000 },
-      { name: "잔치국수", price: 7000 },
-      { name: "만두", price: 5000 }
+      { name: "고기국수", price: 10000 },
+      { name: "비빔국수", price: 9000 },
+      { name: "돔베고기", price: 18000 }
     ],
     seatStatus: "보통",
     updatedAt: "2026-10-28T17:45:00"
   },
   {
-    id: "warm-rice",
-    name: "따뜻한 한끼",
-    address: "서울시 서대문구 신촌로 54길 3",
+    id: "seongsan-sea-table",
+    name: "성산 바다식탁",
+    address: "제주특별자치도 서귀포시 성산읍 일출로 280",
     menu: [
-      { name: "치킨마요 덮밥", price: 8500 },
-      { name: "제육 덮밥", price: 9500 },
-      { name: "된장찌개", price: 8000 }
+      { name: "전복 해산물 뚝배기", price: 18000 },
+      { name: "갈치조림", price: 48000 },
+      { name: "성게미역국", price: 15000 }
     ],
     seatStatus: "만석",
     updatedAt: "2026-10-28T18:02:00"
   },
   {
-    id: "corner-curry",
-    name: "코너 카레",
-    address: "서울시 마포구 와우산로 29길 7",
+    id: "aewol-morning",
+    name: "애월 모닝브런치",
+    address: "제주특별자치도 제주시 애월읍 애월해안로 112",
     menu: [
-      { name: "버터치킨 카레", price: 11000 },
-      { name: "야채 카레", price: 9000 },
-      { name: "탄두리 치킨", price: 12000 }
+      { name: "제주 감귤 브런치", price: 16000 },
+      { name: "전복 버터구이", price: 19000 },
+      { name: "제주 당근 케이크", price: 7500 }
     ],
     seatStatus: "정보 없음",
     updatedAt: null

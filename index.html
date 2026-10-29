@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ko">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>오늘 뭐 먹지?</title><link rel="stylesheet" href="styles.css"></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>제주 오늘 뭐 먹지?</title><link rel="stylesheet" href="styles.css"></head>
 <body data-page="index">
   <main class="container home">
     <div class="background-scene" aria-hidden="true">
@@ -10,13 +10,48 @@
       <span class="ribbon ribbon-one"></span>
       <span class="ribbon ribbon-two"></span>
     </div>
-    <header><a class="logo" href="index.html">오늘 뭐 먹지?</a><p>메뉴 하나로, 새로운 식당을 찾아보세요.</p></header>
+    <header><a class="logo" href="index.html">제주 오늘 뭐 먹지?</a><p>제주에서 먹고 싶은 메뉴와 식당을 찾아보세요.</p></header>
     <section class="search-section" aria-labelledby="main-title">
-      <p class="eyebrow">오늘의 한 끼를 더 21212</p><h1 id="main-title">먹고 싶은 메뉴를<br>먼저 골라보세요.</h1>
-      <img class="main-banner" src="main-banner.png" alt="오늘 뭐 먹지 메인 배너">
-      <form id="search-form" class="search-form"><label class="sr-only" for="menu-search">메뉴 검색</label><input id="menu-search" type="search" placeholder="예: 치킨마요 덮밥" autocomplete="off"><button type="submit">검색</button></form>
+      <p class="eyebrow">JEJU FOOD GUIDE · 2026</p><h1 id="main-title">제주에서 먹고 싶은<br>메뉴를 골라보세요.</h1>
+      <div class="category-section" aria-labelledby="category-title">
+        <p id="category-title" class="category-label">어떤 메뉴를 찾으세요?</p>
+        <div class="category-list" role="list">
+          <button type="button" class="category-chip" data-category="흑돼지" role="listitem">흑돼지</button>
+          <button type="button" class="category-chip" data-category="해산물" role="listitem">해산물</button>
+          <button type="button" class="category-chip" data-category="고기국수" role="listitem">고기국수</button>
+          <button type="button" class="category-chip" data-category="갈치" role="listitem">갈치</button>
+          <button type="button" class="category-chip" data-category="브런치" role="listitem">브런치</button>
+        </div>
+      </div>
+      <form id="search-form" class="search-form"><label class="sr-only" for="menu-search">메뉴 또는 식당 검색</label><input id="menu-search" type="search" placeholder="예: 흑돼지, 고기국수, 식당 이름" autocomplete="off"><button type="submit">검색</button></form>
     </section>
-    <section class="results-section" aria-live="polite"><p id="search-notice" class="search-notice">메뉴를 검색하면 판매 중인 식당을 비교할 수 있어요.</p><div id="results" class="restaurant-list"></div></section>
+    <section class="recommendations" aria-labelledby="recommendations-title">
+      <div class="section-heading"><div><p class="eyebrow">CURATED FOR JEJU</p><h2 id="recommendations-title">오늘의 추천 식당</h2></div><p>카드를 누르면 카카오맵에서 주변 장소를 찾아드려요.</p></div>
+      <div class="recommendation-list">
+        <article class="recommendation-card">
+          <img class="recommendation-image" src="recommendation-black-pork.png" alt="제주 흑돼지 구이">
+          <div class="recommendation-content"><p class="recommendation-area">애월 · 노형</p><h3>제주 흑돼지</h3><p>노릇하게 구운 제주 흑돼지를 찾아보세요.</p><button type="button" class="recommendation-button" data-recommendation="흑돼지">주변 식당 보기</button></div>
+        </article>
+        <article class="recommendation-card">
+          <img class="recommendation-image" src="recommendation-gogi-guksu.png" alt="제주 고기국수">
+          <div class="recommendation-content"><p class="recommendation-area">제주시 · 서귀포</p><h3>고기국수 한 그릇</h3><p>든든하고 따뜻한 제주식 고기국수를 만나보세요.</p><button type="button" class="recommendation-button" data-recommendation="고기국수">주변 식당 보기</button></div>
+        </article>
+        <article class="recommendation-card">
+          <img class="recommendation-image" src="recommendation-seafood.png" alt="제주 해산물 요리">
+          <div class="recommendation-content"><p class="recommendation-area">성산 · 함덕</p><h3>바다 한 상</h3><p>갈치와 전복으로 차린 제주 해산물 식당을 찾아보세요.</p><button type="button" class="recommendation-button" data-recommendation="해산물">주변 식당 보기</button></div>
+        </article>
+      </div>
+    </section>
+    <section class="results-section" aria-live="polite">
+      <p id="search-notice" class="search-notice">메뉴 또는 식당 키워드를 검색하면 카카오맵 장소 결과를 보여드려요.</p>
+      <div class="place-search-layout">
+        <div id="results" class="restaurant-list"></div>
+        <aside class="map-panel" aria-label="카카오맵 검색 결과 지도">
+          <div id="kakao-map" class="kakao-map"></div>
+          <p id="map-status" class="map-status">검색 결과의 위치를 지도에서 확인할 수 있어요.</p>
+        </aside>
+      </div>
+    </section>
   </main>
   <script src="mock-data.js"></script><script src="app.js"></script>
 </body>
