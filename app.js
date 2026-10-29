@@ -58,82 +58,90 @@ function createSearchError(code, message) {
 function getSearchErrorMessage(code, fallback) {
   const messages = {
     SERVER_NOT_RUNNING: "서버 실행 방식 오류예요. Live Server가 아닌 `vercel dev`로 프로젝트를 실행해 주세요.",
-    REST_KEY_MISSING: "API 키 미설정: KAKAO_REST_API_KEY를 Vercel 환경 변수 또는 .env.local에 설정해 주세요.",
-    REST_KEY_INVALID: "API 키 오류: 카카오 REST API 키가 올바른지 확인해 주세요.",
-    JAVASCRIPT_KEY_MISSING: "API 키 미설정: KAKAO_JAVASCRIPT_KEY를 Vercel 환경 변수 또는 .env.local에 설정해 주세요.",
-    KAKAO_NETWORK_ERROR: "네트워크 오류: 카카오 장소 검색 서버에 연결하지 못했습니다. 네트워크를 확인해 주세요.",
-    KAKAO_API_ERROR: "카카오 장소 검색 서비스 오류예요. 잠시 후 다시 시도해 주세요."
+    NAVER_SEARCH_KEY_MISSING: "API 키 미설정: NAVER_SEARCH_CLIENT_ID와 NAVER_SEARCH_CLIENT_SECRET을 Vercel 환경 변수 또는 .env.local에 설정해 주세요.",
+    NAVER_SEARCH_KEY_INVALID: "네이버 검색 API 인증 정보를 확인해 주세요.",
+    NAVER_MAP_CONFIG_MISSING: "네이버 지도 API 설정이 필요합니다. NAVER_MAP_CLIENT_ID와 NAVER_MAP_CLIENT_SECRET을 확인해 주세요.",
+    NAVER_MAP_DOMAIN_ERROR: "네이버 지도 API 설정 또는 허용 도메인 오류예요. 네이버클라우드 Maps의 Web 서비스 URL을 확인해 주세요.",
+    NAVER_RATE_LIMIT: "네이버 API 요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.",
+    NAVER_NETWORK_ERROR: "네트워크 오류: 네이버 API 서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.",
+    NAVER_API_ERROR: "네이버 지역 검색 서비스 오류예요. 잠시 후 다시 시도해 주세요."
   };
   return messages[code] || fallback || "장소 검색 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
 }
 
-let kakaoMap;
-let kakaoMarkers = [];
-let kakaoMapPromise;
+let naverMap;
+let naverMarkers = [];
+let naverMapPromise;
 
-async function loadKakaoMapSdk() {
-  if (window.kakao?.maps) return window.kakao;
-  if (kakaoMapPromise) return kakaoMapPromise;
+async function loadNaverMapSdk() {
+  if (window.naver?.maps) return window.naver;
+  if (naverMapPromise) return naverMapPromise;
 
-  kakaoMapPromise = (async () => {
+  naverMapPromise = (async () => {
     let response;
     try {
-      response = await fetch("/api/kakao-config");
+      response = await fetch("/api/naver-map-config");
     } catch (error) {
-      throw createSearchError("KAKAO_NETWORK_ERROR", "카카오 지도 설정 서버에 연결하지 못했습니다.");
+      throw createSearchError("NAVER_NETWORK_ERROR", "네이버 지도 설정 서버에 연결하지 못했습니다.");
     }
     const payload = await response.json().catch(() => ({}));
     if (response.status === 404) throw createSearchError("SERVER_NOT_RUNNING");
-    if (!response.ok) throw createSearchError(payload.code, payload.error || "카카오 지도 설정을 불러오지 못했습니다.");
-    const { javascriptKey } = payload;
-    if (!javascriptKey) throw new Error("카카오 JavaScript 키가 설정되지 않았습니다.");
+    if (!response.ok) throw createSearchError(payload.code, payload.error || "네이버 지도 설정을 불러오지 못했습니다.");
+    const { mapClientId } = payload;
+    if (!mapClientId) throw createSearchError("NAVER_MAP_CONFIG_MISSING");
 
     await new Promise((resolve, reject) => {
       const script = document.createElement("script");
-      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(javascriptKey)}&autoload=false`;
+      script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${encodeURIComponent(mapClientId)}`;
       script.async = true;
       script.onload = resolve;
-      script.onerror = () => reject(new Error("카카오 지도 SDK를 불러오지 못했습니다."));
+      script.onerror = () => reject(createSearchError("NAVER_MAP_DOMAIN_ERROR"));
       document.head.append(script);
     });
-    await new Promise((resolve) => window.kakao.maps.load(resolve));
-    return window.kakao;
+    return window.naver;
   })();
 
-  return kakaoMapPromise;
+  return naverMapPromise;
 }
 
-async function ensureKakaoMap() {
-  const kakao = await loadKakaoMapSdk();
-  if (!kakaoMap) {
-    kakaoMap = new kakao.maps.Map(document.querySelector("#kakao-map"), {
-      center: new kakao.maps.LatLng(33.4996, 126.5312),
-      level: 9
-    });
+async function ensureNaverMap() {
+  const naver = await loadNaverMapSdk();
+  if (!naverMap) {
+    try {
+      naverMap = new naver.maps.Map(document.querySelector("#naver-map"), {
+        center: new naver.maps.LatLng(33.4996, 126.5312),
+        zoom: 9
+      });
+    } catch (error) {
+      throw createSearchError("NAVER_MAP_DOMAIN_ERROR");
+    }
   }
-  return kakao;
+  return naver;
 }
 
-function clearKakaoMarkers() {
-  kakaoMarkers.forEach((marker) => marker.setMap(null));
-  kakaoMarkers = [];
+function clearNaverMarkers() {
+  naverMarkers.forEach(({ marker, infoWindow }) => {
+    infoWindow.close();
+    marker.setMap(null);
+  });
+  naverMarkers = [];
 }
 
-function drawKakaoPlaces(kakao, places) {
-  clearKakaoMarkers();
-  const bounds = new kakao.maps.LatLngBounds();
+function drawNaverPlaces(naver, places) {
+  clearNaverMarkers();
+  const bounds = new naver.maps.LatLngBounds();
   places.forEach((place) => {
-    const latitude = Number(place.y);
-    const longitude = Number(place.x);
+    const latitude = Number(place.latitude);
+    const longitude = Number(place.longitude);
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
-    const position = new kakao.maps.LatLng(latitude, longitude);
-    const marker = new kakao.maps.Marker({ position, map: kakaoMap, title: place.name });
-    const infoWindow = new kakao.maps.InfoWindow({ content: `<div class="map-info-window">${escapeHtml(place.name)}</div>` });
-    kakao.maps.event.addListener(marker, "click", () => infoWindow.open(kakaoMap, marker));
-    kakaoMarkers.push(marker);
+    const position = new naver.maps.LatLng(latitude, longitude);
+    const marker = new naver.maps.Marker({ position, map: naverMap, title: place.name });
+    const infoWindow = new naver.maps.InfoWindow({ content: `<div class="map-info-window">${escapeHtml(place.name)}</div>`, borderWidth: 0, backgroundColor: "transparent", disableAnchor: true });
+    naver.maps.Event.addListener(marker, "click", () => infoWindow.open(naverMap, marker));
+    naverMarkers.push({ marker, infoWindow });
     bounds.extend(position);
   });
-  if (kakaoMarkers.length) kakaoMap.setBounds(bounds);
+  if (naverMarkers.length) naverMap.fitBounds(bounds);
 }
 
 function initIndex() {
@@ -149,10 +157,10 @@ function initIndex() {
   function renderPlaces(places) {
     results.innerHTML = places.map((place) => `
       <article class="restaurant-card place-card">
-        <div class="card-top"><h3>${escapeHtml(place.name)}</h3><span class="place-source">카카오맵</span></div>
+        <div class="card-top"><h3>${escapeHtml(place.name)}</h3><span class="place-source">네이버 지역 검색</span></div>
         <p class="place-category">${escapeHtml(place.category || "카테고리 정보 없음")}</p>
         <p class="address">${escapeHtml(place.roadAddress || place.address || "주소 정보 없음")}</p>
-        <a class="place-link" href="${escapeHtml(place.placeUrl)}" target="_blank" rel="noopener">카카오맵에서 상세 보기 <span>↗</span></a>
+        <a class="place-link" href="${escapeHtml(place.naverUrl)}" target="_blank" rel="noopener">네이버 원본 보기 <span>↗</span></a>
       </article>`).join("");
   }
 
@@ -167,36 +175,36 @@ function initIndex() {
       return;
     }
     submitButton.disabled = true;
-    notice.textContent = `‘${cleanTerm}’ 장소를 카카오맵에서 검색 중이에요.`;
+    notice.textContent = `‘${cleanTerm}’ 장소를 네이버 지역 검색에서 찾고 있어요.`;
     mapStatus.textContent = "지도를 준비하고 있어요.";
     try {
       let placeResponse;
       try {
-        placeResponse = await fetch(`/api/places?query=${encodeURIComponent(`제주 ${cleanTerm}`)}`);
+        placeResponse = await fetch(`/api/naver-places?query=${encodeURIComponent(`제주 ${cleanTerm}`)}`);
       } catch (error) {
-        throw createSearchError("KAKAO_NETWORK_ERROR");
+        throw createSearchError("NAVER_NETWORK_ERROR");
       }
       const payload = await placeResponse.json().catch(() => ({}));
       if (placeResponse.status === 404) throw createSearchError("SERVER_NOT_RUNNING");
       if (!placeResponse.ok) throw createSearchError(payload.code, payload.error || "장소 검색에 실패했습니다.");
-      const kakao = await ensureKakaoMap();
       const places = Array.isArray(payload.places) ? payload.places : [];
       if (!places.length) {
-        notice.textContent = `‘${cleanTerm}’에 대한 카카오맵 장소 검색 결과가 없어요.`;
+        notice.textContent = `‘${cleanTerm}’에 대한 네이버 지역 검색 결과가 없어요.`;
         mapStatus.textContent = "표시할 장소 마커가 없습니다.";
-        clearKakaoMarkers();
+        clearNaverMarkers();
         return;
       }
       renderPlaces(places);
-      drawKakaoPlaces(kakao, places);
-      notice.textContent = `카카오맵에서 찾은 ‘${cleanTerm}’ 장소 ${places.length}곳이에요.`;
+      const naver = await ensureNaverMap();
+      drawNaverPlaces(naver, places);
+      notice.textContent = `네이버 지역 검색에서 찾은 ‘${cleanTerm}’ 장소 ${places.length}곳이에요.`;
       mapStatus.textContent = "마커를 선택하면 장소 이름을 확인할 수 있어요.";
     } catch (error) {
       notice.textContent = getSearchErrorMessage(error.code, error.message);
       mapStatus.textContent = error.code === "SERVER_NOT_RUNNING"
         ? "정적 Live Server에서는 /api 함수가 실행되지 않습니다."
-        : "카카오 지도 설정 또는 네트워크 연결을 확인해 주세요.";
-      results.innerHTML = "";
+        : "네이버 지도 설정 또는 네트워크 연결을 확인해 주세요.";
+      if (!results.children.length) results.innerHTML = "";
     } finally {
       submitButton.disabled = false;
     }

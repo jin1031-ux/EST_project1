@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로그인 | 제주 오늘 뭐 먹지?</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="auth">
+  <main class="auth-shell">
+    <section class="auth-card" aria-labelledby="auth-title">
+      <a class="logo" href="auth.html">제주 오늘 뭐 먹지?</a>
+      <p class="auth-kicker">WELCOME TO JEJU</p>
+      <h1 id="auth-title">제주 한 끼를<br>찾아보세요.</h1>
+      <p class="auth-description">로그인하면 나만의 제주 맛집 탐색을 시작할 수 있어요.</p>
+      <div class="auth-tabs" role="tablist" aria-label="인증 방식">
+        <button class="auth-tab is-active" type="button" role="tab" aria-selected="true" data-auth-tab="login">로그인</button>
+        <button class="auth-tab" type="button" role="tab" aria-selected="false" data-auth-tab="signup">회원가입</button>
+      </div>
+      <form id="login-form" class="auth-form" novalidate>
+        <label>이메일<input name="email" type="email" autocomplete="email" required placeholder="name@example.com"></label>
+        <label>비밀번호<input name="password" type="password" autocomplete="current-password" required placeholder="비밀번호를 입력하세요"></label>
+        <button class="auth-submit" type="submit">로그인하고 맛집 찾기</button>
+      </form>
+      <form id="signup-form" class="auth-form" hidden novalidate>
+        <label>이메일<input name="email" type="email" autocomplete="email" required placeholder="name@example.com"></label>
+        <label>비밀번호<input name="password" type="password" autocomplete="new-password" minlength="6" required placeholder="6자 이상 입력하세요"></label>
+        <button class="auth-submit" type="submit">이메일로 회원가입</button>
+      </form>
+      <p id="auth-feedback" class="auth-feedback" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-client.js"></script>
+</body>
+</html>
