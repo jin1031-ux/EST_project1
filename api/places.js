@@ -6,6 +6,11 @@ module.exports = async (req, res) => {
 
   const query = typeof req.query.query === "string" ? req.query.query.trim().slice(0, 100) : "";
   if (!query) return res.status(400).json({ code: "QUERY_MISSING", error: "검색어를 입력해 주세요." });
+  const requestedPage = Number.parseInt(req.query.page, 10);
+  const currentPage = Number.isFinite(requestedPage) ? requestedPage : 1;
+  if (currentPage < 1 || currentPage > 45) {
+    return res.status(400).json({ code: "PAGE_OUT_OF_RANGE", error: "요청할 수 있는 검색 결과 페이지 범위를 벗어났습니다." });
+  }
 
   const restApiKey = process.env.KAKAO_REST_API_KEY;
   if (!restApiKey) {
@@ -16,7 +21,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const params = new URLSearchParams({ query, size: "15" });
+    const params = new URLSearchParams({ query, page: String(currentPage), size: "15" });
     const response = await fetch(`https://dapi.kakao.com/v2/local/search/keyword.json?${params}`, {
       headers: { Authorization: `KakaoAK ${restApiKey}` }
     });
@@ -38,7 +43,12 @@ module.exports = async (req, res) => {
       address: place.road_address_name || place.address_name || "주소 정보 없음",
       kakaoUrl: place.place_url || `https://map.kakao.com/?q=${encodeURIComponent(place.place_name || query)}`
     }));
-    return res.status(200).json({ places });
+    return res.status(200).json({
+      places,
+      isEnd: Boolean(data.meta && data.meta.is_end) || currentPage >= 45,
+      totalCount: Number(data.meta && data.meta.total_count) || 0,
+      currentPage
+    });
   } catch (error) {
     return res.status(503).json({
       code: "KAKAO_NETWORK_ERROR",

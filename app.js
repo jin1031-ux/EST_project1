@@ -38,10 +38,18 @@ function initIndex() {
   const results = document.querySelector("#results");
   const notice = document.querySelector("#search-notice");
   const submitButton = form.querySelector("button[type='submit']");
+  const loadMoreArea = document.querySelector("#load-more-area");
+  const loadMoreButton = document.querySelector("#load-more-button");
+  const paginationNotice = document.querySelector("#pagination-notice");
   const initialTerm = new URLSearchParams(window.location.search).get("q");
+  let activeTerm = "";
+  let currentPage = 0;
+  let isEnd = true;
+  let isLoading = false;
+  let searchRequestId = 0;
 
-  function renderPlaces(places) {
-    results.innerHTML = places.map((place) => `
+  function placeCards(places) {
+    return places.map((place) => `
       <article class="restaurant-card place-card">
         <div class="card-top"><h3>${escapeHtml(place.name)}</h3><span class="place-source">카카오맵 장소 검색 결과</span></div>
         <p class="place-category">${escapeHtml(place.category)}</p>
@@ -50,38 +58,90 @@ function initIndex() {
       </article>`).join("");
   }
 
-  async function submitSearch(term) {
-    const cleanTerm = term.trim();
-    input.value = term;
-    results.innerHTML = "";
-    if (!cleanTerm) {
-      history.replaceState(null, "", "index.html");
-      notice.textContent = getSearchErrorMessage("QUERY_MISSING");
+  function updateLoadMore() {
+    if (!activeTerm) {
+      loadMoreArea.hidden = true;
       return;
     }
-    history.replaceState(null, "", `index.html?q=${encodeURIComponent(cleanTerm)}`);
+    loadMoreArea.hidden = false;
+    loadMoreButton.hidden = isEnd;
+    loadMoreButton.disabled = isLoading;
+    loadMoreButton.textContent = isLoading ? "불러오는 중…" : "더보기";
+    if (!isEnd) paginationNotice.textContent = "";
+  }
+
+  async function loadPage(page, append) {
+    if (isLoading || page < 1 || page > 45) return;
+    const termAtRequest = activeTerm;
+    const requestId = searchRequestId;
+    isLoading = true;
     submitButton.disabled = true;
-    notice.textContent = `카카오맵에서 ‘${cleanTerm}’ 장소를 찾고 있어요.`;
+    updateLoadMore();
+    if (append) notice.textContent = "다음 카카오맵 장소 검색 결과를 불러오고 있어요.";
     try {
       let response;
-      try { response = await fetch(`/api/places?query=${encodeURIComponent(`제주 ${cleanTerm}`)}`); }
+      try { response = await fetch(`/api/places?query=${encodeURIComponent(`제주 ${termAtRequest}`)}&page=${page}`); }
       catch (error) { throw createSearchError("KAKAO_NETWORK_ERROR"); }
       const payload = await response.json().catch(() => ({}));
       if (response.status === 404) throw createSearchError("SERVER_NOT_RUNNING");
       if (!response.ok) throw createSearchError(payload.code, payload.error);
+      if (requestId !== searchRequestId) return;
+
       const places = Array.isArray(payload.places) ? payload.places : [];
-      if (!places.length) {
-        notice.textContent = `‘${cleanTerm}’에 대한 카카오맵 장소 검색 결과가 없습니다.`;
+      currentPage = Number(payload.currentPage) || page;
+      isEnd = Boolean(payload.isEnd) || currentPage >= 45 || !places.length;
+      if (!places.length && !append) {
+        notice.textContent = `‘${termAtRequest}’에 대한 카카오맵 장소 검색 결과가 없습니다.`;
+        paginationNotice.textContent = "";
         return;
       }
-      renderPlaces(places);
-      notice.textContent = `카카오맵 장소 검색 결과 ${places.length}곳입니다.`;
+      if (append) results.insertAdjacentHTML("beforeend", placeCards(places));
+      else results.innerHTML = placeCards(places);
+
+      notice.textContent = `카카오맵 장소 검색 결과 ${results.children.length}곳을 보고 있어요.`;
+      if (isEnd) paginationNotice.textContent = "모든 검색 결과를 확인했어요.";
     } catch (error) {
-      notice.textContent = getSearchErrorMessage(error.code, error.message);
-    } finally { submitButton.disabled = false; }
+      if (requestId === searchRequestId) {
+        notice.textContent = getSearchErrorMessage(error.code, error.message);
+      }
+    } finally {
+      if (requestId === searchRequestId) {
+        isLoading = false;
+        submitButton.disabled = false;
+        updateLoadMore();
+      }
+    }
+  }
+
+  function submitSearch(term) {
+    const cleanTerm = term.trim();
+    input.value = term;
+    if (!cleanTerm) {
+      history.replaceState(null, "", "index.html");
+      notice.textContent = getSearchErrorMessage("QUERY_MISSING");
+      results.innerHTML = "";
+      activeTerm = "";
+      currentPage = 0;
+      isEnd = true;
+      paginationNotice.textContent = "";
+      updateLoadMore();
+      return;
+    }
+    history.replaceState(null, "", `index.html?q=${encodeURIComponent(cleanTerm)}`);
+    searchRequestId += 1;
+    activeTerm = cleanTerm;
+    currentPage = 0;
+    isEnd = false;
+    isLoading = false;
+    results.innerHTML = "";
+    paginationNotice.textContent = "";
+    notice.textContent = `카카오맵에서 ‘${cleanTerm}’ 장소를 찾고 있어요.`;
+    updateLoadMore();
+    loadPage(1, false);
   }
 
   form.addEventListener("submit", (event) => { event.preventDefault(); submitSearch(input.value); });
+  loadMoreButton.addEventListener("click", () => loadPage(currentPage + 1, true));
   document.querySelectorAll(".category-chip").forEach((chip) => chip.addEventListener("click", () => submitSearch(chip.dataset.category)));
   document.querySelectorAll(".recommendation-button").forEach((button) => button.addEventListener("click", () => submitSearch(button.dataset.recommendation)));
   if (initialTerm) submitSearch(initialTerm);
