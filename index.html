@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>오늘 뭐 먹지?</title><link rel="stylesheet" href="styles.css"></head>
+<body data-page="index">
+  <main class="container home">
+    <div class="background-scene" aria-hidden="true">
+      <span class="orb orb-terracotta"></span>
+      <span class="orb orb-gold"></span>
+      <span class="orb orb-sage"></span>
+      <span class="ribbon ribbon-one"></span>
+      <span class="ribbon ribbon-two"></span>
+    </div>
+    <header><a class="logo" href="index.html">오늘 뭐 먹지?</a><p>메뉴 하나로, 새로운 식당을 찾아보세요.</p></header>
+    <section class="search-section" aria-labelledby="main-title">
+      <p class="eyebrow">오늘의 한 끼를 더 가볍게</p><h1 id="main-title">먹고 싶은 메뉴를<br>먼저 골라보세요.</h1>
+      <img class="main-banner" src="main-banner.png" alt="오늘 뭐 먹지 메인 배너">
+      <form id="search-form" class="search-form"><label class="sr-only" for="menu-search">메뉴 검색</label><input id="menu-search" type="search" placeholder="예: 치킨마요 덮밥" autocomplete="off"><button type="submit">검색</button></form>
+    </section>
+    <section class="results-section" aria-live="polite"><p id="search-notice" class="search-notice">메뉴를 검색하면 판매 중인 식당을 비교할 수 있어요.</p><div id="results" class="restaurant-list"></div></section>
+  </main>
+  <script src="mock-data.js"></script><script src="app.js"></script>
+</body>
+</html>
