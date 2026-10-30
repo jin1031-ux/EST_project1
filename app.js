@@ -48,6 +48,15 @@ async function getAllRestaurantsWithMenus() {
   return data || [];
 }
 
+async function getSearchRestaurants() {
+  const { data, error } = await getRestaurantClient()
+    .from("restaurants")
+    .select("id, name, address, seat_status, seat_status_updated_at, restaurant_menus(name, price)")
+    .order("name");
+  if (error) throw error;
+  return (data || []).map(toRestaurant);
+}
+
 async function getReservationRequests() {
   const { data, error } = await getRestaurantClient()
     .from("reservation_requests")
@@ -60,8 +69,12 @@ function formatTime(value) {
   if (!value) return "갱신 이력 없음";
   return new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(value));
 }
-function statusClass(status) { return `status-${status.replace(" ", "-")}`; }
-function statusBadge(restaurant) { return `<span class="status-badge ${statusClass(restaurant.seatStatus)}">${restaurant.seatStatus}</span>`; }
+function seatStatusLabel(status) { return status && status !== "정보 없음" ? status : "좌석 정보 확인 필요"; }
+function statusClass(status) { return `status-${status.replaceAll(" ", "-")}`; }
+function statusBadge(restaurant) {
+  const status = seatStatusLabel(restaurant.seatStatus);
+  return `<span class="status-badge ${statusClass(status)}">${escapeHtml(status)}</span>`;
+}
 function escapeHtml(value) { return String(value || "").replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[character])); }
 function createSearchError(code, message) { const error = new Error(message); error.code = code; return error; }
 
@@ -96,6 +109,7 @@ function initIndex() {
   let isEnd = true;
   let isLoading = false;
   let searchRequestId = 0;
+  let databaseResultCount = 0;
 
   function resetResultSections() {
     featuredResults.innerHTML = "";
@@ -112,6 +126,45 @@ function initIndex() {
         <p class="address">${escapeHtml(place.address)}</p>
         <a class="place-link" href="${escapeHtml(place.kakaoUrl)}" target="_blank" rel="noopener">카카오맵 상세 보기 <span>↗</span></a>
       </article>`).join("");
+  }
+
+  function normalizeSearchText(value) {
+    return String(value || "").toLocaleLowerCase("ko-KR").replace(/\s+/g, "");
+  }
+
+  function restaurantCards(restaurants, term) {
+    return restaurants.map((restaurant) => {
+      const normalizedTerm = normalizeSearchText(term);
+      const matchingMenus = restaurant.menu.filter((menu) => normalizeSearchText(menu.name).includes(normalizedTerm));
+      const representativeMenu = matchingMenus[0] || restaurant.menu[0];
+      const menuSummary = representativeMenu
+        ? `<p class="matched-menu"><span>${matchingMenus.length ? "일치 메뉴" : "대표 메뉴"}</span><strong>${matchingMenus.length ? `<mark>${escapeHtml(representativeMenu.name)}</mark>` : escapeHtml(representativeMenu.name)} <em>${Number(representativeMenu.price).toLocaleString()}원</em></strong></p>`
+        : '<p class="matched-menu no-menu">등록된 메뉴가 없습니다.</p>';
+      const detailUrl = `detail.html?id=${encodeURIComponent(restaurant.id)}&q=${encodeURIComponent(term)}`;
+      return `<a class="restaurant-card database-restaurant-card" href="${detailUrl}"><div class="card-top"><h3>${escapeHtml(restaurant.name)}</h3>${statusBadge(restaurant)}</div><p class="address">${escapeHtml(restaurant.address)}</p>${menuSummary}</a>`;
+    }).join("");
+  }
+
+  async function loadDatabaseResults(term, requestId) {
+    try {
+      const restaurants = await getSearchRestaurants();
+      if (requestId !== searchRequestId) return;
+      const normalizedTerm = normalizeSearchText(term);
+      const matches = restaurants.filter((restaurant) => {
+        const nameMatches = normalizeSearchText(restaurant.name).includes(normalizedTerm);
+        const menuMatches = restaurant.menu.some((menu) => normalizeSearchText(menu.name).includes(normalizedTerm));
+        const hasSeatData = Boolean(restaurant.seatStatus && restaurant.seatStatus !== "정보 없음");
+        return nameMatches || (menuMatches && hasSeatData);
+      });
+      databaseResultCount = matches.length;
+      featuredResults.innerHTML = restaurantCards(matches, term);
+      featuredSection.hidden = matches.length === 0;
+    } catch (error) {
+      if (requestId !== searchRequestId) return;
+      databaseResultCount = 0;
+      featuredResults.innerHTML = "";
+      featuredSection.hidden = true;
+    }
   }
 
   function updateLoadMore() {
@@ -147,24 +200,25 @@ function initIndex() {
       currentPage = Number(payload.currentPage) || page;
       isEnd = Boolean(payload.isEnd) || currentPage >= 45 || !places.length;
       if (!places.length && !append) {
-        notice.textContent = `‘${termAtRequest}’에 대한 카카오맵 장소 검색 결과가 없습니다.`;
+        notice.textContent = databaseResultCount
+          ? `서비스 등록 식당 ${databaseResultCount}곳을 찾았어요. 카카오맵 장소 검색 결과는 없습니다.`
+          : `‘${termAtRequest}’에 대한 검색 결과가 없습니다.`;
         paginationNotice.textContent = "";
-        resetResultSections();
+        results.innerHTML = "";
+        generalResultsSection.hidden = true;
         return;
       }
       if (append) {
         results.insertAdjacentHTML("beforeend", placeCards(places));
         if (places.length) generalResultsSection.hidden = false;
       } else {
-        const featuredPlaces = places.slice(0, 4);
-        const generalPlaces = places.slice(4);
-        featuredResults.innerHTML = placeCards(featuredPlaces, false);
-        results.innerHTML = placeCards(generalPlaces);
-        featuredSection.hidden = featuredPlaces.length === 0;
-        generalResultsSection.hidden = generalPlaces.length === 0;
+        results.innerHTML = placeCards(places);
+        generalResultsSection.hidden = places.length === 0;
       }
 
-      notice.textContent = `카카오맵 장소 검색 결과 ${featuredResults.children.length + results.children.length}곳을 보고 있어요.`;
+      notice.textContent = databaseResultCount
+        ? `서비스 등록 식당 ${databaseResultCount}곳과 카카오맵 장소 검색 결과 ${results.children.length}곳을 보고 있어요.`
+        : `카카오맵 장소 검색 결과 ${results.children.length}곳을 보고 있어요.`;
       if (isEnd) paginationNotice.textContent = "모든 검색 결과를 확인했어요.";
     } catch (error) {
       if (requestId === searchRequestId) {
@@ -200,9 +254,11 @@ function initIndex() {
     isEnd = false;
     isLoading = false;
     resetResultSections();
+    databaseResultCount = 0;
     paginationNotice.textContent = "";
     notice.textContent = `카카오맵에서 ‘${cleanTerm}’ 장소를 찾고 있어요.`;
     updateLoadMore();
+    loadDatabaseResults(cleanTerm, searchRequestId);
     loadPage(1, false);
   }
 
@@ -232,12 +288,11 @@ async function initDetail() {
     showDetailEmptyState(page, backUrl, "정보를 찾을 수 없어요", "요청한 식당 정보가 없습니다.");
     return;
   }
-  const mapUrl = `https://map.naver.com/p/search/${encodeURIComponent(restaurant.address)}`;
-  const naverPlaceUrl = `https://map.naver.com/p/search/${encodeURIComponent(`${restaurant.name} ${restaurant.address}`)}`;
+  const kakaoPlaceUrl = `https://map.kakao.com/?q=${encodeURIComponent(`${restaurant.name} ${restaurant.address}`)}`;
   const menuItems = restaurant.menu.length
     ? restaurant.menu.map((menu) => `<li><span>${escapeHtml(menu.name)}</span><strong>${Number(menu.price).toLocaleString()}원</strong></li>`).join("")
     : "<li><span>등록된 메뉴가 없습니다.</span></li>";
-  page.innerHTML = `<a class="back-link" href="${backUrl}">← 검색 결과로 돌아가기</a><section class="detail-hero"><p class="eyebrow">오늘의 식당</p><h1>${escapeHtml(restaurant.name)}</h1><p class="address large-address">${escapeHtml(restaurant.address)}</p><div class="detail-actions"><a class="button" target="_blank" rel="noopener" href="${mapUrl}">길 찾기 <span>↗</span></a><a class="button" target="_blank" rel="noopener" href="${naverPlaceUrl}">네이버 플레이스에서 보기 <span>↗</span></a></div></section><section class="detail-grid"><article class="info-panel"><p class="eyebrow">메뉴와 가격</p><h2>차림 메뉴</h2><ul class="menu-list">${menuItems}</ul></article><article class="info-panel seat-panel"><p class="eyebrow">좌석 현황</p><h2>${statusBadge(restaurant)}</h2><p class="updated">마지막 갱신 · ${formatTime(restaurant.updatedAt)}</p><p class="caution">좌석 정보는 수동 갱신 정보이며 실제와 다를 수 있습니다.</p></article></section>`;
+  page.innerHTML = `<a class="back-link" href="${backUrl}">← 검색 결과로 돌아가기</a><section class="detail-hero"><p class="eyebrow">오늘의 식당</p><h1>${escapeHtml(restaurant.name)}</h1><p class="address large-address">${escapeHtml(restaurant.address)}</p><div class="detail-actions"><a class="button" target="_blank" rel="noopener" href="${kakaoPlaceUrl}">카카오맵에서 보기 <span>↗</span></a></div></section><section class="detail-grid"><article class="info-panel"><p class="eyebrow">메뉴와 가격</p><h2>차림 메뉴</h2><ul class="menu-list">${menuItems}</ul></article><article class="info-panel seat-panel"><p class="eyebrow">좌석 현황</p><h2>${statusBadge(restaurant)}</h2><p class="updated">마지막 갱신 · ${formatTime(restaurant.updatedAt)}</p><p class="caution">좌석 정보는 수동 갱신 정보이며 실제와 다를 수 있습니다.</p></article></section>`;
   const reservationPanel = document.createElement("section");
   reservationPanel.className = "reservation-panel";
   reservationPanel.innerHTML = `<div><p class="eyebrow">TABLE RESERVATION</p><h2>방문 인원을 선택해 주세요.</h2><p>예약 요청 후 식당에서 확인 안내를 드립니다.</p></div><form id="reservation-form" class="reservation-form"><label for="party-size">인원</label><select id="party-size" name="party-size">${[1,2,3,4,5,6,7,8].map((count) => `<option value="${count}">${count}명</option>`).join("")}</select><button type="submit">예약하기</button></form><p id="reservation-feedback" class="reservation-feedback" aria-live="polite"></p>`;
