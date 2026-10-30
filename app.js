@@ -38,6 +38,24 @@ async function getAllRestaurants() {
   if (error) throw error;
   return (data || []).map(toRestaurant);
 }
+
+async function getAllRestaurantsWithMenus() {
+  const { data, error } = await getRestaurantClient()
+    .from("restaurants")
+    .select("id, name, address, restaurant_menus(name, price)")
+    .order("name");
+  if (error) throw error;
+  return data || [];
+}
+
+async function getReservationRequests() {
+  const { data, error } = await getRestaurantClient()
+    .from("reservation_requests")
+    .select("id, party_size, requested_at, user_email, restaurants(name, address)")
+    .order("requested_at", { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
 function formatTime(value) {
   if (!value) return "갱신 이력 없음";
   return new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(value));
@@ -259,6 +277,10 @@ async function initDetail() {
 function initAdmin() {
   const list = document.querySelector("#admin-list");
   const feedback = document.querySelector("#save-feedback");
+  const reservationList = document.querySelector("#reservation-request-list");
+  const restaurantInformationList = document.querySelector("#restaurant-information-list");
+  const tabButtons = document.querySelectorAll("[data-admin-tab]");
+  const panels = document.querySelectorAll("[data-admin-panel]");
   function render(restaurants) {
     if (!restaurants.length) {
       list.innerHTML = '<section class="empty-state"><p class="eyebrow">등록된 식당이 없어요</p><h1>관리할 식당 정보가 없습니다.</h1></section>';
@@ -273,6 +295,52 @@ function initAdmin() {
       list.innerHTML = '<section class="empty-state"><p class="eyebrow">정보를 불러올 수 없어요</p><h1>식당 정보를 불러오지 못했습니다.</h1></section>';
     }
   }
+  async function loadReservationRequests() {
+    reservationList.innerHTML = '<p class="admin-loading">예약 요청을 불러오고 있어요.</p>';
+    try {
+      const reservations = await getReservationRequests();
+      if (!reservations.length) {
+        reservationList.innerHTML = '<section class="empty-state"><p class="eyebrow">예약 요청이 없어요</p><h1>확인할 예약 요청이 없습니다.</h1></section>';
+        return;
+      }
+      reservationList.innerHTML = reservations.map((reservation) => {
+        const restaurant = reservation.restaurants || {};
+        return `<article class="admin-card reservation-card"><div><p class="admin-card-label">${escapeHtml(reservation.user_email || "이메일 정보 없음")}</p><h2>${escapeHtml(restaurant.name || "식당 정보 없음")}</h2><p>${escapeHtml(restaurant.address || "")}</p><p class="updated">요청 시각 · ${formatTime(reservation.requested_at)}</p></div><div class="reservation-party-size">${Number(reservation.party_size)}명</div></article>`;
+      }).join("");
+    } catch (error) {
+      reservationList.innerHTML = '<section class="empty-state"><p class="eyebrow">정보를 불러올 수 없어요</p><h1>예약 요청을 불러오지 못했습니다.</h1></section>';
+    }
+  }
+  async function loadRestaurantInformation() {
+    restaurantInformationList.innerHTML = '<p class="admin-loading">식당 정보를 불러오고 있어요.</p>';
+    try {
+      const restaurants = await getAllRestaurantsWithMenus();
+      if (!restaurants.length) {
+        restaurantInformationList.innerHTML = '<section class="empty-state"><p class="eyebrow">등록된 식당이 없어요</p><h1>확인할 식당 정보가 없습니다.</h1></section>';
+        return;
+      }
+      restaurantInformationList.innerHTML = restaurants.map((restaurant) => {
+        const menus = restaurant.restaurant_menus || [];
+        const menuItems = menus.length
+          ? menus.map((menu) => `<li><span>${escapeHtml(menu.name)}</span><strong>${Number(menu.price).toLocaleString()}원</strong></li>`).join("")
+          : "<li><span>등록된 메뉴가 없습니다.</span></li>";
+        return `<article class="admin-card restaurant-information-card"><div><h2>${escapeHtml(restaurant.name)}</h2><p>${escapeHtml(restaurant.address)}</p></div><ul class="admin-menu-list">${menuItems}</ul></article>`;
+      }).join("");
+    } catch (error) {
+      restaurantInformationList.innerHTML = '<section class="empty-state"><p class="eyebrow">정보를 불러올 수 없어요</p><h1>식당·메뉴 정보를 불러오지 못했습니다.</h1></section>';
+    }
+  }
+  function selectAdminTab(tabName) {
+    tabButtons.forEach((button) => {
+      const selected = button.dataset.adminTab === tabName;
+      button.classList.toggle("is-active", selected);
+      button.setAttribute("aria-selected", String(selected));
+    });
+    panels.forEach((panel) => { panel.hidden = panel.dataset.adminPanel !== tabName; });
+    if (tabName === "reservations") loadReservationRequests();
+    if (tabName === "restaurants") loadRestaurantInformation();
+  }
+  tabButtons.forEach((button) => button.addEventListener("click", () => selectAdminTab(button.dataset.adminTab)));
   list.addEventListener("click", async (event) => {
     if (!event.target.matches(".save-button")) return;
     const card = event.target.closest(".admin-card");
