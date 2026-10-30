@@ -54,7 +54,7 @@
     const adminLink = document.createElement("a");
     adminLink.className = "admin-menu-link";
     adminLink.href = "admin.html";
-    adminLink.textContent = "관리자 메뉴";
+    adminLink.textContent = "관리자페이지";
     const button = document.createElement("button");
     button.className = "logout-button";
     button.type = "button";
