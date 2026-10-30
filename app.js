@@ -1,15 +1,37 @@
-const STORAGE_KEY = "today-menu-seat-statuses";
+function getRestaurantClient() {
+  if (!window.menuSupabaseClient) throw new Error("SUPABASE_CLIENT_UNAVAILABLE");
+  return window.menuSupabaseClient;
+}
 
-function getSavedStatuses() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch (error) { return {}; }
+function toRestaurant(record) {
+  return {
+    id: record.id,
+    name: record.name,
+    address: record.address,
+    seatStatus: record.seat_status,
+    updatedAt: record.seat_status_updated_at,
+    menu: (record.restaurant_menus || []).map((menu) => ({ name: menu.name, price: menu.price }))
+  };
 }
-function getRestaurant(id) {
-  const restaurant = restaurants.find((item) => item.id === id);
-  if (!restaurant) return null;
-  const saved = getSavedStatuses()[id];
-  return saved ? { ...restaurant, seatStatus: saved.status, updatedAt: saved.updatedAt } : restaurant;
+
+async function getRestaurant(id) {
+  const { data, error } = await getRestaurantClient()
+    .from("restaurants")
+    .select("id, name, address, seat_status, seat_status_updated_at, restaurant_menus(name, price)")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? toRestaurant(data) : null;
 }
-function getAllRestaurants() { return restaurants.map((restaurant) => getRestaurant(restaurant.id)); }
+
+async function getAllRestaurants() {
+  const { data, error } = await getRestaurantClient()
+    .from("restaurants")
+    .select("id, name, address, seat_status, seat_status_updated_at")
+    .order("name");
+  if (error) throw error;
+  return (data || []).map(toRestaurant);
+}
 function formatTime(value) {
   if (!value) return "갱신 이력 없음";
   return new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(value));
@@ -166,46 +188,94 @@ function initIndex() {
   if (initialTerm) submitSearch(initialTerm);
 }
 
-function initDetail() {
+function showDetailEmptyState(page, backUrl, title, message) {
+  page.innerHTML = `<section class="empty-state"><p class="eyebrow">${escapeHtml(title)}</p><h1>${escapeHtml(message)}</h1><a class="button" href="${backUrl}">메인으로 돌아가기</a></section>`;
+}
+
+async function initDetail() {
   const params = new URLSearchParams(window.location.search);
-  const restaurant = getRestaurant(params.get("id"));
   const page = document.querySelector("#detail-content");
   const searchTerm = params.get("q");
   const backUrl = searchTerm ? `index.html?q=${encodeURIComponent(searchTerm)}` : "index.html";
+  let restaurant;
+  try {
+    restaurant = await getRestaurant(params.get("id"));
+  } catch (error) {
+    showDetailEmptyState(page, backUrl, "정보를 불러올 수 없어요", "식당 정보를 불러오지 못했습니다.");
+    return;
+  }
   if (!restaurant) {
-    page.innerHTML = `<section class="empty-state"><p class="eyebrow">정보를 찾을 수 없어요</p><h1>요청한 식당 정보가 없습니다.</h1><a class="button" href="${backUrl}">메인으로 돌아가기</a></section>`;
+    showDetailEmptyState(page, backUrl, "정보를 찾을 수 없어요", "요청한 식당 정보가 없습니다.");
     return;
   }
   const mapUrl = `https://map.naver.com/p/search/${encodeURIComponent(restaurant.address)}`;
   const naverPlaceUrl = `https://map.naver.com/p/search/${encodeURIComponent(`${restaurant.name} ${restaurant.address}`)}`;
-  page.innerHTML = `<a class="back-link" href="${backUrl}">← 검색 결과로 돌아가기</a><section class="detail-hero"><p class="eyebrow">오늘의 식당</p><h1>${restaurant.name}</h1><p class="address large-address">${restaurant.address}</p><div class="detail-actions"><a class="button" target="_blank" rel="noopener" href="${mapUrl}">길 찾기 <span>↗</span></a><a class="button" target="_blank" rel="noopener" href="${naverPlaceUrl}">네이버 플레이스에서 보기 <span>↗</span></a></div></section><section class="detail-grid"><article class="info-panel"><p class="eyebrow">메뉴와 가격</p><h2>차림 메뉴</h2><ul class="menu-list">${restaurant.menu.map((menu) => `<li><span>${menu.name}</span><strong>${menu.price.toLocaleString()}원</strong></li>`).join("")}</ul></article><article class="info-panel seat-panel"><p class="eyebrow">좌석 현황</p><h2>${statusBadge(restaurant)}</h2><p class="updated">마지막 갱신 · ${formatTime(restaurant.updatedAt)}</p><p class="caution">좌석 정보는 수동 갱신 정보이며 실제와 다를 수 있습니다.</p></article></section>`;
+  const menuItems = restaurant.menu.length
+    ? restaurant.menu.map((menu) => `<li><span>${escapeHtml(menu.name)}</span><strong>${Number(menu.price).toLocaleString()}원</strong></li>`).join("")
+    : "<li><span>등록된 메뉴가 없습니다.</span></li>";
+  page.innerHTML = `<a class="back-link" href="${backUrl}">← 검색 결과로 돌아가기</a><section class="detail-hero"><p class="eyebrow">오늘의 식당</p><h1>${escapeHtml(restaurant.name)}</h1><p class="address large-address">${escapeHtml(restaurant.address)}</p><div class="detail-actions"><a class="button" target="_blank" rel="noopener" href="${mapUrl}">길 찾기 <span>↗</span></a><a class="button" target="_blank" rel="noopener" href="${naverPlaceUrl}">네이버 플레이스에서 보기 <span>↗</span></a></div></section><section class="detail-grid"><article class="info-panel"><p class="eyebrow">메뉴와 가격</p><h2>차림 메뉴</h2><ul class="menu-list">${menuItems}</ul></article><article class="info-panel seat-panel"><p class="eyebrow">좌석 현황</p><h2>${statusBadge(restaurant)}</h2><p class="updated">마지막 갱신 · ${formatTime(restaurant.updatedAt)}</p><p class="caution">좌석 정보는 수동 갱신 정보이며 실제와 다를 수 있습니다.</p></article></section>`;
   const reservationPanel = document.createElement("section");
   reservationPanel.className = "reservation-panel";
   reservationPanel.innerHTML = `<div><p class="eyebrow">TABLE RESERVATION</p><h2>방문 인원을 선택해 주세요.</h2><p>예약 요청 후 식당에서 확인 안내를 드립니다.</p></div><form id="reservation-form" class="reservation-form"><label for="party-size">인원</label><select id="party-size" name="party-size">${[1,2,3,4,5,6,7,8].map((count) => `<option value="${count}">${count}명</option>`).join("")}</select><button type="submit">예약하기</button></form><p id="reservation-feedback" class="reservation-feedback" aria-live="polite"></p>`;
   page.append(reservationPanel);
-  reservationPanel.querySelector("#reservation-form").addEventListener("submit", (event) => {
+  reservationPanel.querySelector("#reservation-form").addEventListener("submit", async (event) => {
     event.preventDefault();
-    const count = reservationPanel.querySelector("#party-size").value;
-    reservationPanel.querySelector("#reservation-feedback").textContent = `${restaurant.name} ${count}명 예약 요청이 접수되었어요. 식당 확인 후 안내해 드릴게요.`;
+    const form = event.currentTarget;
+    const button = form.querySelector("button[type='submit']");
+    const feedback = reservationPanel.querySelector("#reservation-feedback");
+    const count = Number(form.querySelector("#party-size").value);
+    button.disabled = true;
+    feedback.textContent = "예약 요청을 저장하고 있어요.";
+    try {
+      const { error } = await getRestaurantClient()
+        .from("reservation_requests")
+        .insert({ restaurant_id: restaurant.id, party_size: count });
+      if (error) throw error;
+      feedback.textContent = `${restaurant.name} ${count}명 예약 요청이 접수되었어요. 식당 확인 후 안내해 드릴게요.`;
+    } catch (error) {
+      feedback.textContent = "예약 요청을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+    } finally {
+      button.disabled = false;
+    }
   });
 }
 
 function initAdmin() {
   const list = document.querySelector("#admin-list");
   const feedback = document.querySelector("#save-feedback");
-  function render() {
-    list.innerHTML = getAllRestaurants().map((restaurant) => `<article class="admin-card" data-id="${restaurant.id}"><div><h2>${restaurant.name}</h2><p>${restaurant.address}</p><p class="updated">마지막 갱신 · ${formatTime(restaurant.updatedAt)}</p></div><div class="admin-controls"><label>좌석 상태 <select aria-label="${restaurant.name} 좌석 상태">${seatStatuses.map((status) => `<option value="${status}" ${status === restaurant.seatStatus ? "selected" : ""}>${status}</option>`).join("")}</select></label><button type="button" class="save-button">변경 사항 저장</button></div></article>`).join("");
+  function render(restaurants) {
+    if (!restaurants.length) {
+      list.innerHTML = '<section class="empty-state"><p class="eyebrow">등록된 식당이 없어요</p><h1>관리할 식당 정보가 없습니다.</h1></section>';
+      return;
+    }
+    list.innerHTML = restaurants.map((restaurant) => `<article class="admin-card" data-id="${escapeHtml(restaurant.id)}"><div><h2>${escapeHtml(restaurant.name)}</h2><p>${escapeHtml(restaurant.address)}</p><p class="updated">마지막 갱신 · ${formatTime(restaurant.updatedAt)}</p></div><div class="admin-controls"><label>좌석 상태 <select aria-label="${escapeHtml(restaurant.name)} 좌석 상태">${seatStatuses.map((status) => `<option value="${status}" ${status === restaurant.seatStatus ? "selected" : ""}>${status}</option>`).join("")}</select></label><button type="button" class="save-button">변경 사항 저장</button></div></article>`).join("");
   }
-  list.addEventListener("click", (event) => {
+  async function loadRestaurants() {
+    try {
+      render(await getAllRestaurants());
+    } catch (error) {
+      list.innerHTML = '<section class="empty-state"><p class="eyebrow">정보를 불러올 수 없어요</p><h1>식당 정보를 불러오지 못했습니다.</h1></section>';
+    }
+  }
+  list.addEventListener("click", async (event) => {
     if (!event.target.matches(".save-button")) return;
     const card = event.target.closest(".admin-card");
-    const saved = getSavedStatuses();
-    saved[card.dataset.id] = { status: card.querySelector("select").value, updatedAt: new Date().toISOString() };
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); } catch (error) { /* Mock data remains usable. */ }
-    render();
-    feedback.textContent = "변경 사항을 저장했어요. 같은 브라우저의 메인과 상세 화면에 반영됩니다.";
+    const button = event.target;
+    button.disabled = true;
+    try {
+      const { error } = await getRestaurantClient()
+        .from("restaurants")
+        .update({ seat_status: card.querySelector("select").value, seat_status_updated_at: new Date().toISOString() })
+        .eq("id", card.dataset.id);
+      if (error) throw error;
+      feedback.textContent = "변경 사항을 저장했어요. 식당 상세 화면에 반영됩니다.";
+      await loadRestaurants();
+    } catch (error) {
+      feedback.textContent = "변경 사항을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+      button.disabled = false;
+    }
   });
-  render();
+  loadRestaurants();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
