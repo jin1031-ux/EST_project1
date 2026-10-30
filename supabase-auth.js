@@ -1,6 +1,7 @@
 (function initializeSupabaseAuth() {
   const authClient = window.menuSupabaseClient;
   const isAuthPage = document.body.dataset.page === "auth";
+  const isAdminPage = document.body.dataset.page === "admin";
   if (!authClient) return;
 
   const goToMain = () => window.location.replace("index.html");
@@ -34,12 +35,26 @@
     return controls;
   }
 
-  function renderControls(user) {
+  async function getUserRole(user) {
+    const { data, error } = await authClient
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (error || !data) return "user";
+    return data.role === "admin" ? "admin" : "user";
+  }
+
+  function renderControls(user, role) {
     const controls = getControls();
     if (!controls || !user) return;
     const email = document.createElement("span");
     email.className = "auth-user";
     email.textContent = user.email || "로그인 사용자";
+    const adminLink = document.createElement("a");
+    adminLink.className = "admin-menu-link";
+    adminLink.href = "admin.html";
+    adminLink.textContent = "관리자 메뉴";
     const button = document.createElement("button");
     button.className = "logout-button";
     button.type = "button";
@@ -54,7 +69,29 @@
         window.alert("로그아웃하지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.");
       }
     });
-    controls.replaceChildren(email, button);
+    controls.replaceChildren(email, ...(role === "admin" ? [adminLink] : []), button);
+  }
+
+  let accessCheckId = 0;
+
+  async function applyAccess(session) {
+    const checkId = ++accessCheckId;
+    if (isAuthPage) {
+      if (session) goToMain();
+      return;
+    }
+    if (!session) {
+      goToAuth();
+      return;
+    }
+    const role = await getUserRole(session.user);
+    if (checkId !== accessCheckId) return;
+    if (isAdminPage && role !== "admin") {
+      goToMain();
+      return;
+    }
+    if (isAdminPage) document.body.classList.remove("access-pending");
+    renderControls(session.user, role);
   }
 
   function showTab(name) {
@@ -119,10 +156,7 @@
   }
 
   authClient.auth.onAuthStateChange((_event, session) => {
-    if (isAuthPage) {
-      if (session) goToMain();
-    } else if (session) renderControls(session.user);
-    else goToAuth();
+    applyAccess(session);
   });
 
   authClient.auth.getSession().then(({ data, error }) => {
@@ -130,10 +164,10 @@
       if (isAuthPage) setFeedback("로그인 상태를 확인하지 못했습니다. 네트워크를 확인해 주세요.", "error");
       return;
     }
-    if (isAuthPage) {
-      if (data.session) goToMain();
-      else setupAuthPage();
-    } else if (data.session) renderControls(data.session.user);
-    else goToAuth();
+    if (isAuthPage && !data.session) {
+      setupAuthPage();
+      return;
+    }
+    applyAccess(data.session);
   });
 })();

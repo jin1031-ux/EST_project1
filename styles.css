@@ -65,11 +65,11 @@ body[data-page="index"] .restaurant-card { box-shadow: 0 11px 24px rgba(89,61,43
 /* Supabase Auth */
 .brand-block > p { margin: 8px 0 0; color: var(--muted); }
 .auth-controls { position: fixed; top: 22px; right: 24px; z-index: 20; display: flex; align-items: center; gap: 10px; }
-.auth-user { max-width: 180px; overflow: hidden; color: var(--muted); font-size: .82rem; text-overflow: ellipsis; white-space: nowrap; }
+.auth-user { max-width: 180px; overflow: hidden; color: var(--muted); font-size: .82rem; text-overflow: ellipsis; white-space: nowrap; }.admin-menu-link { min-height: 36px; padding: 0 13px; border: 1px solid var(--line); border-radius: 999px; color: var(--secondary); font-size: .8rem; font-weight: 800; line-height: 36px; text-decoration: none; white-space: nowrap; }.admin-menu-link:hover { border-color: var(--secondary); color: var(--primary); }
 .logout-button { min-height: 40px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.78); color: var(--ink); font: inherit; font-weight: 800; cursor: pointer; box-shadow: 0 8px 20px rgba(36,80,66,.1); }
 .logout-button:hover { border-color: var(--accent); color: var(--accent); }
 .logout-button:disabled, .auth-submit:disabled { cursor: wait; opacity: .65; }
-body[data-page="auth"] { min-height: 100vh; background: linear-gradient(135deg, #f4fbf7 0%, #e6f4ed 52%, #f8efe2 100%); }
+body.access-pending .admin-page { visibility: hidden; } body[data-page="auth"] { min-height: 100vh; background: linear-gradient(135deg, #f4fbf7 0%, #e6f4ed 52%, #f8efe2 100%); }
 .auth-shell { display: grid; min-height: 100vh; padding: 32px 20px; place-items: center; }
 .auth-card { width: min(100%, 460px); padding: clamp(30px, 7vw, 54px); border: 1px solid rgba(31,101,75,.16); border-radius: 30px; background: rgba(255,255,255,.9); box-shadow: 0 24px 70px rgba(31,101,75,.16); }
 .auth-card .logo { display: inline-block; margin-bottom: 34px; }
