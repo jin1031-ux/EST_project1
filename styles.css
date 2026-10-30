@@ -119,6 +119,53 @@ body.access-pending .admin-page { visibility: hidden; } body[data-page="auth"] {
 :root[data-theme="dark"] .admin-nav-button { background: var(--surface); }
 @media (max-width: 620px) { .theme-toggle { top: 12px; right: 14px; min-height: 36px; padding: 0 11px; font-size: .75rem; }.auth-controls { right: 106px; } }
 
+/* 로그인·회원가입 전용 카드와 CSS 입체 장식 */
+body[data-page="auth"] { overflow-x: hidden; background: #F3F5F3; }
+.auth-shell { position: relative; z-index: 1; }
+.auth-geometry { position: fixed; z-index: 0; inset: 0; overflow: hidden; pointer-events: none; perspective: 1000px; }
+.auth-shape { position: absolute; display: block; pointer-events: none; transform-style: preserve-3d; }
+.shape-cube { width: 150px; height: 150px; border: 1px solid rgba(76, 120, 150, .42); background: rgba(69, 113, 145, .28); box-shadow: 22px 20px 0 rgba(31, 67, 92, .14); transform: rotate(25deg) skewY(-10deg); }
+.shape-cube::before, .shape-cube::after { position: absolute; content: ""; }
+.shape-cube::before { width: 100%; height: 100%; border: 1px solid rgba(202, 222, 232, .4); background: rgba(86, 138, 174, .2); transform: translate(25px, -22px) skewY(22deg); transform-origin: bottom left; }
+.shape-cube::after { top: 100%; left: 0; width: 100%; height: 44px; border: 1px solid rgba(30, 70, 95, .28); background: rgba(38, 81, 110, .35); transform: skewX(-47deg); transform-origin: top left; }
+.shape-prism { width: 112px; height: 126px; border: 1px solid rgba(65, 133, 137, .45); background: rgba(55, 144, 143, .28); clip-path: polygon(50% 0, 100% 32%, 82% 100%, 18% 100%, 0 32%); transform: rotate(-18deg); }
+.shape-prism::after { position: absolute; inset: 0; background: rgba(143, 210, 199, .28); clip-path: polygon(50% 0, 100% 32%, 50% 58%); content: ""; }
+.shape-one { top: 7%; left: 13%; animation: auth-float-one 15s ease-in-out infinite; }
+.shape-two { top: 17%; right: 14%; width: 106px; height: 106px; opacity: .82; animation: auth-float-two 18s ease-in-out -5s infinite; }
+.shape-three { top: 35%; left: 25%; width: 74px; height: 84px; animation: auth-float-one 13s ease-in-out -7s infinite; }
+.shape-four { right: 18%; bottom: 12%; width: 178px; height: 178px; opacity: .86; animation: auth-float-two 20s ease-in-out -9s infinite; }
+.shape-five { bottom: 17%; left: 20%; width: 94px; height: 106px; opacity: .72; animation: auth-float-one 17s ease-in-out -3s infinite; }
+.shape-six { top: 49%; right: 28%; width: 54px; height: 54px; opacity: .7; animation: auth-float-two 12s ease-in-out -6s infinite; }
+@keyframes auth-float-one { 0%, 100% { transform: rotate(25deg) skewY(-10deg) translate3d(0, 0, 0); } 50% { transform: rotate(32deg) skewY(-8deg) translate3d(12px, -18px, 0); } }
+@keyframes auth-float-two { 0%, 100% { transform: rotate(-18deg) translate3d(0, 0, 0); } 50% { transform: rotate(-10deg) translate3d(-14px, 15px, 0); } }
+body[data-page="auth"] .auth-card { position: relative; z-index: 1; width: min(100%, 500px); border-color: #CCD6DB; border-radius: 28px; background: #FFFDF8; box-shadow: 0 24px 60px rgba(57, 75, 83, .13); }
+body[data-page="auth"] .auth-kicker { color: #3C8E8A; }
+body[data-page="auth"] .auth-tabs { background: #E7EDF0; }
+body[data-page="auth"] .auth-tab.is-active { color: #315B75; }
+body[data-page="auth"] .auth-submit { background: #A65F4D; }
+
+:root[data-theme="dark"] body[data-page="auth"] { background: #101C24; }
+:root[data-theme="dark"] .shape-cube { border-color: rgba(122, 165, 194, .5); background: rgba(42, 102, 145, .38); box-shadow: 22px 20px 0 rgba(2, 15, 25, .28); }
+:root[data-theme="dark"] .shape-cube::before { border-color: rgba(177, 205, 224, .42); background: rgba(84, 137, 175, .28); }
+:root[data-theme="dark"] .shape-cube::after { border-color: rgba(82, 148, 176, .36); background: rgba(20, 59, 91, .58); }
+:root[data-theme="dark"] .shape-prism { border-color: rgba(98, 190, 182, .5); background: rgba(39, 141, 139, .42); }
+:root[data-theme="dark"] .shape-prism::after { background: rgba(106, 201, 190, .32); }
+:root[data-theme="dark"] body[data-page="auth"] .auth-card { border-color: #395363; background: #192B38; box-shadow: 0 28px 66px rgba(0, 0, 0, .3); }
+:root[data-theme="dark"] body[data-page="auth"] .auth-card h1, :root[data-theme="dark"] body[data-page="auth"] .auth-form label { color: #F4E9DD; }
+:root[data-theme="dark"] body[data-page="auth"] .auth-description { color: #B7C5CC; }
+:root[data-theme="dark"] body[data-page="auth"] .auth-kicker { color: #62B6B1; }
+:root[data-theme="dark"] body[data-page="auth"] .auth-tabs { background: #243947; }
+:root[data-theme="dark"] body[data-page="auth"] .auth-tab { color: #AFBCC4; }
+:root[data-theme="dark"] body[data-page="auth"] .auth-tab.is-active { background: #172834; color: #E7EEF0; box-shadow: none; }
+:root[data-theme="dark"] body[data-page="auth"] .auth-form input { border-color: #405969; background: #142530; color: #F4E9DD; }
+:root[data-theme="dark"] body[data-page="auth"] .auth-form input::placeholder { color: #8296A3; }
+:root[data-theme="dark"] body[data-page="auth"] .auth-form input:focus { border-color: #62AAB3; box-shadow: 0 0 0 4px rgba(98, 170, 179, .2); }
+:root[data-theme="dark"] body[data-page="auth"] .auth-submit { border-color: #4A819E; background: #3E718E; color: #FFFDF8; box-shadow: none; }
+:root[data-theme="dark"] body[data-page="auth"] .auth-submit:hover { border-color: #6297B4; background: #4B819F; }
+:root[data-theme="dark"] body[data-page="auth"] .auth-feedback { color: #F2D1C8; }
+@media (max-width: 620px) { .auth-geometry .shape-one { top: 7%; left: -48px; width: 105px; height: 105px; }.auth-geometry .shape-two { top: 16%; right: -42px; width: 78px; height: 78px; }.auth-geometry .shape-three, .auth-geometry .shape-six { display: none; }.auth-geometry .shape-four { right: -58px; bottom: 7%; width: 120px; height: 120px; }.auth-geometry .shape-five { bottom: 15%; left: -42px; width: 68px; height: 76px; } body[data-page="auth"] .auth-card { padding: 32px 26px; border-radius: 24px; } }
+@media (prefers-reduced-motion: reduce) { .auth-shape { animation: none !important; } }
+
 /* 장식 배경 없이 서비스 콘텐츠만 보이도록 정리합니다. */
 body[data-page="index"], body[data-page="auth"] { background: #FAF7F0; }
 .background-scene, .orb, .ribbon { display: none !important; animation: none !important; }
