@@ -149,11 +149,18 @@
     setFeedback("가입 확인 이메일을 보냈습니다. 이메일 인증 후 로그인해 주세요.", "success");
   }
 
+  let isAuthPageSetup = false;
+
   function setupAuthPage() {
+    if (isAuthPageSetup) return;
+    isAuthPageSetup = true;
+    showTab("login");
     document.querySelectorAll("[data-auth-tab]").forEach((tab) => tab.addEventListener("click", () => showTab(tab.dataset.authTab)));
     document.getElementById("login-form").addEventListener("submit", login);
     document.getElementById("signup-form").addEventListener("submit", signUp);
   }
+
+  if (isAuthPage) setupAuthPage();
 
   authClient.auth.onAuthStateChange((_event, session) => {
     applyAccess(session);
