@@ -3,6 +3,12 @@ function getRestaurantClient() {
   return window.menuSupabaseClient;
 }
 
+async function getCurrentUser() {
+  const { data, error } = await getRestaurantClient().auth.getUser();
+  if (error) throw error;
+  return data.user;
+}
+
 function toRestaurant(record) {
   return {
     id: record.id,
@@ -227,9 +233,19 @@ async function initDetail() {
     button.disabled = true;
     feedback.textContent = "예약 요청을 저장하고 있어요.";
     try {
+      const user = await getCurrentUser();
+      if (!user || !user.email) {
+        feedback.textContent = "로그인 후 예약 요청을 할 수 있습니다.";
+        return;
+      }
       const { error } = await getRestaurantClient()
         .from("reservation_requests")
-        .insert({ restaurant_id: restaurant.id, party_size: count });
+        .insert({
+          restaurant_id: restaurant.id,
+          party_size: count,
+          user_id: user.id,
+          user_email: user.email
+        });
       if (error) throw error;
       feedback.textContent = `${restaurant.name} ${count}명 예약 요청이 접수되었어요. 식당 확인 후 안내해 드릴게요.`;
     } catch (error) {
